@@ -178,5 +178,5 @@ jobs:
 
             Once you run the code push to main branch 
 
-
-
+ ## github access to project url
+https://github.com/NANA-2016/ecommercerce-platform1.git
