@@ -170,8 +170,11 @@ jobs:
 
 
             Now you can push to gitbub main
-
             
+
+     https://github.com/NANA-2016/ecommercerce-platform1.git    
+
+     Above is the code for the whole workflow .
 
             Once you run the code push to main branch 
 
