@@ -22,28 +22,158 @@ Still on AWS create ECR repositories
 
 Under your GitHub repo → Settings → Secrets and variables → Actions:
 
+<img width="1430" height="852" alt="image" src="https://github.com/user-attachments/assets/7f12efb1-5d8f-4f31-bc4d-3af26c9c2caa" />
+
+# Docker setup
+
+Create a folder named  app for backend  and webapp for frontend 
+
+ In both folders add the Docker file in each folder 
+
+ # GITHUB ACTIONWORK FLOW FILE
+
+  Create a folder .github inside the folder create a nother folder called workflows . Inside the folder,create a fle called deploy.yml
+
+   The jobs defined in the file include both backend named as app and frontend jobs named as webap.
+
+    The jobs which are defined by the code include 
+
+ 1. Checkout repo
+
+2. Cache node modules
+
+3. Configure AWS credentials
+
+3. Login to ECR
+
+4. Build Docker image with Buildx caching
+
+5. Push image to ECR
+
+6. Deploy to ECS (via aws ecs update-service
+
+7. The code below was used for the whole process defining each job abd step
 
 
+ < name: Build, Push, and Deploy to AWS ECS with Caching
 
-The project has a frontend and back end . The frontend is built with React, and the backend API with Node.js/Express. The project is containerized with Docker and deployed to AWS ECS using GitHub Actions.
+on:
+  push:
+    branches: [main]
 
- ## STEP BY STEP GUIDE 
- 
-Frontend: React app in webapp/
+jobs:
+  backend:
+    name: Build, Push Backend Image and Deploy to ECS
+    runs-on: ubuntu-latest
+    env:
+      AWS_REGION: ${{ secrets.AWS_REGION }}
+      AWS_ACCOUNT_ID: ${{ secrets.AWS_ACCOUNT_ID }}
+      ECR_REPOSITORY_BACKEND: ${{ secrets.ECR_REPOSITORY_BACKEND }}
 
-<img width="585" height="258" alt="image" src="https://github.com/user-attachments/assets/1564054b-4e9e-49c5-a28e-ad8b8a3df6c8" />
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Cache Docker layers (backend)
+        uses: actions/cache@v3
+        with:
+          path: /tmp/.buildx-cache-app
+          key: app-buildx-${{ github.sha }}
+          restore-keys: |
+            app-buildx-
+
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-region: ${{ secrets.AWS_REGION }}
+
+      - name: Login to Amazon ECR
+        run: |
+          aws ecr get-login-password --region $AWS_REGION | \
+          docker login --username AWS \
+          --password-stdin $AWS_ACCOUNT_ID.dkr.ecr.$AWS_REGION.amazonaws.com
+
+      - name: Build and push backend Docker image
+        uses: docker/build-push-action@v5
+        with:
+          context: ./app
+          push: true
+          tags: ${{ secrets.AWS_ACCOUNT_ID }}.dkr.ecr.${{ secrets.AWS_REGION }}.amazonaws.com/${{ secrets.ECR_REPOSITORY_BACKEND }}:latest
+          cache-from: type=local,src=/tmp/.buildx-cache-app
+          cache-to: type=local,dest=/tmp/.buildx-cache-app
+
+      - name: Deploy backend to ECS
+        run: |
+          aws ecs update-service \
+            --cluster your-backend-cluster \
+            --service your-backend-service \
+            --force-new-deployment \
+            --region $AWS_REGION
+
+  frontend:
+    name: Build, Push Frontend Image and Deploy to ECS
+    runs-on: ubuntu-latest
+    env:
+      AWS_REGION: ${{ secrets.AWS_REGION }}
+      AWS_ACCOUNT_ID: ${{ secrets.AWS_ACCOUNT_ID }}
+      ECR_REPOSITORY_FRONTEND: ${{ secrets.ECR_REPOSITORY_FRONTEND }}
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Cache Docker layers (frontend)
+        uses: actions/cache@v3
+        with:
+          path: /tmp/.buildx-cache-webapp
+          key: webapp-buildx-${{ github.sha }}
+          restore-keys: |
+            webapp-buildx-
+
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-region: ${{ secrets.AWS_REGION }}
+
+      - name: Login to Amazon ECR
+        run: |
+          aws ecr get-login-password --region $AWS_REGION | \
+          docker login --username AWS \
+          --password-stdin $AWS_ACCOUNT_ID.dkr.ecr.$AWS_REGION.amazonaws.com
+
+      - name: Build and push frontend Docker image
+        uses: docker/build-push-action@v5
+        with:
+          context: ./webapp
+          push: true
+          tags: ${{ secrets.AWS_ACCOUNT_ID }}.dkr.ecr.${{ secrets.AWS_REGION }}.amazonaws.com/${{ secrets.ECR_REPOSITORY_FRONTEND }}:latest
+          cache-from: type=local,src=/tmp/.buildx-cache-webapp
+          cache-to: type=local,dest=/tmp/.buildx-cache-webapp
+
+      - name: Deploy frontend to ECS
+        run: |
+          aws ecs update-service \
+            --cluster your-frontend-cluster \
+            --service your-frontend-service \
+            --force-new-deployment \
+            --region $AWS_REGION >
 
 
-Backend: Node.js app in app/
+            Now you can push to gitbub main
 
-<img width="595" height="201" alt="image" src="https://github.com/user-attachments/assets/e4e6226e-a5d8-4b96-8705-541f30deffcd" />
+            
+
+            Once you run the code push to main branch 
 
 
-CI/CD: GitHub Actions
-
-Containerization: Docker
-
-Deployment: AWS ECS (Elastic Container Service) with ECR (Elastic Container Registry)
-
-Caching: Docker Buildx with BuildKit
 
